@@ -8,6 +8,12 @@ import (
 
 const NGCONN_RETRY = 5
 
+type ngConnInterface interface {
+	Read(buff []byte) (int, error)
+	Write(buff []byte) (int, error)
+	Close() error
+}
+
 var emptyIoError = errors.New("Error Empty io")
 
 type emptyNgConn struct{}

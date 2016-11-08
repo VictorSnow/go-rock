@@ -17,8 +17,8 @@ type ngServer struct {
 	servs  map[int64]*ngConn
 	sMutex sync.Mutex
 
-	client *ngConn // 客户端链接
-	seq    int64   // 系列号
+	client ngConnInterface // 客户端链接
+	seq    int64           // 系列号
 
 	clientAddr string
 	servAddr   string
@@ -115,7 +115,7 @@ func (s *ngServer) listenClient() {
 func (s *ngServer) handleClient(c net.Conn) {
 	defer c.Close()
 	defer func() {
-		s.client = nil
+		s.client = &emptyNgConn{}
 	}()
 
 	if tc, ok := c.(*net.TCPConn); ok {
