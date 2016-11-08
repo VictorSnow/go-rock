@@ -2,15 +2,11 @@ package main
 
 import (
 	"bufio"
-	"errors"
-	"io"
 	"log"
 	"net"
 	"sync"
 	"sync/atomic"
 )
-
-var nilIoError = errors.New("Error Nil io")
 
 type ngServerConfig struct {
 	servAddr   string
@@ -21,32 +17,18 @@ type ngServer struct {
 	servs  map[int64]*ngConn
 	sMutex sync.Mutex
 
-	client io.ReadWriteCloser // 客户端链接
-	seq    int64              // 系列号
+	client *ngConn // 客户端链接
+	seq    int64   // 系列号
 
 	clientAddr string
 	servAddr   string
-}
-
-type nilIo struct{}
-
-func (r *nilIo) Read(buff []byte) (int, error) {
-	return 0, nilIoError
-}
-
-func (r *nilIo) Close() error {
-	return nilIoError
-}
-
-func (r *nilIo) Write(buff []byte) (int, error) {
-	return 0, nilIoError
 }
 
 func newNgServer(config *ngServerConfig) *ngServer {
 	server := &ngServer{
 		servs:      make(map[int64]*ngConn),
 		sMutex:     sync.Mutex{},
-		client:     &nilIo{},
+		client:     nil,
 		seq:        1,
 		clientAddr: config.clientAddr,
 		servAddr:   config.servAddr,
@@ -133,13 +115,13 @@ func (s *ngServer) listenClient() {
 func (s *ngServer) handleClient(c net.Conn) {
 	defer c.Close()
 	defer func() {
-		s.client = &nilIo{}
+		s.client = nil
 	}()
 
 	if tc, ok := c.(*net.TCPConn); ok {
 		tc.SetNoDelay(true)
 	}
-	s.client = c
+	s.client = &ngConn{c}
 
 	reader := bufio.NewReader(c)
 	for {
@@ -154,7 +136,7 @@ func (s *ngServer) handleClient(c net.Conn) {
 			seq := msg.seq
 			conn := s.getServ(seq)
 			if conn != nil {
-				conn.c.Write(msg.buff)
+				conn.Write(msg.buff)
 			} else {
 				// 发送关闭消息
 				s.closeSeq(seq)
@@ -194,7 +176,7 @@ func (s *ngServer) closeSeq(seq int64) {
 	if c, ok := s.servs[seq]; ok {
 		delete(s.servs, seq)
 
-		c.c.Close()
+		c.Close()
 
 		closeMsg := newMsg(HEAD_CLOSE, seq, []byte{})
 		s.client.Write(encodeMsg(closeMsg))

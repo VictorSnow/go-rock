@@ -16,7 +16,7 @@ type ngClient struct {
 	servs  map[int64]*ngConn
 	sMutex sync.Mutex
 
-	client     net.Conn // 客户端链接
+	client     *ngConn // 客户端链接
 	servAddr   string
 	clientAddr string
 }
@@ -40,7 +40,7 @@ func (s *ngClient) start() {
 
 	defer c.Close()
 
-	s.client = c
+	s.client = &ngConn{c}
 	reader := bufio.NewReader(c)
 
 	go s.keepAlive()
@@ -72,7 +72,7 @@ func (s *ngClient) start() {
 			seq := msg.seq
 			r := s.getServ(seq)
 			if r != nil {
-				n, err := r.c.Write(msg.buff)
+				n, err := r.Write(msg.buff)
 				if err != nil {
 					s.closeSeq(seq)
 					continue
@@ -110,7 +110,7 @@ func (s *ngClient) servLocal(seq int64) {
 
 	buff := make([]byte, MAX_PACK_LEN)
 	for {
-		n, err := c.c.Read(buff)
+		n, err := c.Read(buff)
 
 		if err != nil {
 			break
@@ -131,7 +131,7 @@ func (s *ngClient) closeSeq(seq int64) {
 
 	if c, ok := s.servs[seq]; ok {
 		delete(s.servs, seq)
-		c.c.Close()
+		c.Close()
 
 		closeMsg := newMsg(HEAD_CLOSE, seq, []byte{})
 		s.client.Write(encodeMsg(closeMsg))
