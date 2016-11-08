@@ -6,9 +6,12 @@ import (
 	"io"
 )
 
+const MAX_PACK_LEN = 1400
+
 const HEAD_NEWCONN = 1
 const HEAD_CONTENT = 2
 const HEAD_CLOSE = 3
+const HEAD_KEEPALIVE = 4
 
 type ngMessage struct {
 	head   byte

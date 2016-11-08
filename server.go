@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"log"
 	"net"
 	"sync"
 	"sync/atomic"
 )
+
+var nilIoError = errors.New("Error Nil io")
 
 type ngServerConfig struct {
 	servAddr   string
@@ -28,15 +31,15 @@ type ngServer struct {
 type nilIo struct{}
 
 func (r *nilIo) Read(buff []byte) (int, error) {
-	return 0, io.EOF
+	return 0, nilIoError
 }
 
 func (r *nilIo) Close() error {
-	return nil
+	return nilIoError
 }
 
 func (r *nilIo) Write(buff []byte) (int, error) {
-	return 0, io.EOF
+	return 0, nilIoError
 }
 
 func newNgServer(config *ngServerConfig) *ngServer {
@@ -89,7 +92,7 @@ func (s *ngServer) handleServ(c net.Conn) {
 	}
 
 	// 分发数据
-	buff := make([]byte, 1400)
+	buff := make([]byte, MAX_PACK_LEN)
 	for {
 		n, err := c.Read(buff)
 		if err != nil {
@@ -159,8 +162,10 @@ func (s *ngServer) handleClient(c net.Conn) {
 		case HEAD_CLOSE:
 			seq := msg.seq
 			s.closeSeq(seq)
+		case HEAD_KEEPALIVE:
+			continue
 		default:
-			log.Println("Server 未知的消息", msg)
+			log.Println("Server 忽略消息", msg)
 		}
 	}
 }

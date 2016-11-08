@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net"
 	"sync"
+	"time"
 )
 
 type ngClientConfig struct {
@@ -41,6 +42,8 @@ func (s *ngClient) start() {
 
 	s.client = c
 	reader := bufio.NewReader(c)
+
+	go s.keepAlive()
 
 	for {
 		msg, err := readMsg(reader)
@@ -83,6 +86,16 @@ func (s *ngClient) start() {
 	}
 }
 
+func (s *ngClient) keepAlive() {
+	msg := newMsg(HEAD_KEEPALIVE, 0, []byte{})
+	for {
+		select {
+		case <-time.After(10 * time.Second):
+			s.client.Write(encodeMsg(msg))
+		}
+	}
+}
+
 func (s *ngClient) servLocal(seq int64) {
 	c := s.getServ(seq)
 	if c == nil {
@@ -95,7 +108,7 @@ func (s *ngClient) servLocal(seq int64) {
 		tc.SetNoDelay(true)
 	}
 
-	buff := make([]byte, 1400)
+	buff := make([]byte, MAX_PACK_LEN)
 	for {
 		n, err := c.c.Read(buff)
 
