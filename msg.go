@@ -64,7 +64,7 @@ func readMsg(r *bufio.Reader) (*ngMessage, error) {
 	msg.seq = int64(head[3]) + int64(head[4])<<8 + int64(head[5])<<16 + int64(head[6])<<24 + int64(head[7])<<32 + int64(head[8])<<40 + int64(head[9])<<48 + int64(head[10])<<56
 	msg.buff = []byte{}
 
-	if msg.head != 1 && msg.head != 2 && msg.head != 3 {
+	if msg.head != 1 && msg.head != 2 && msg.head != 3 && msg.head != 4 {
 		return nil, errors.New("消息头错误")
 	}
 
