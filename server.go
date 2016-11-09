@@ -37,8 +37,19 @@ func newNgServer(config *ngServerConfig) *ngServer {
 }
 
 func (s *ngServer) start() {
-	go s.listenClient()
-	go s.listenServ()
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		s.listenClient()
+	}()
+
+	go func() {
+		defer wg.Done()
+		s.listenServ()
+	}()
+	wg.Wait()
 }
 
 func (s *ngServer) nextSeq() int64 {

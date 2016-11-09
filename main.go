@@ -1,23 +1,50 @@
 package main
 
 import (
-	"time"
+	"encoding/json"
+	"flag"
+	"log"
+	"os"
 )
 
+type Config struct {
+	Mode             string
+	RemoteAddr       string
+	RemoteServerAddr string
+	LocalAddr        string
+}
+
+var ServerConfig Config
+
 func main() {
-	// 测试
-	servConfig := &ngServerConfig{"127.0.0.1:18080", "127.0.0.1:18081"}
-	clientConfig := &ngClientConfig{"127.0.0.1:18081", "127.0.0.1:80"}
 
-	server := newNgServer(servConfig)
-	client := newNgClient(clientConfig)
+	config_file := flag.String("config", "", "config file")
+	flag.Parse()
 
-	go newProxyServer().start()
+	if *config_file == "" {
+		*config_file = "config.json"
+	}
 
-	server.start()
-	client.start()
+	f, e := os.OpenFile(*config_file, os.O_CREATE, os.ModePerm)
+	if e != nil {
+		log.Println("打开文件错误", *f)
+		return
+	}
 
-	for {
-		time.Sleep(60 * time.Second)
+	ServerConfig := Config{}
+	err := json.NewDecoder(f).Decode(&ServerConfig)
+	if err != nil {
+		log.Println("解析配置文件错误", err)
+		return
+	}
+
+	if ServerConfig.Mode == "client" {
+		clientConfig := &ngClientConfig{ServerConfig.RemoteAddr, ServerConfig.LocalAddr}
+		client := newNgClient(clientConfig)
+		client.forever()
+	} else {
+		servConfig := &ngServerConfig{ServerConfig.RemoteServerAddr, ServerConfig.RemoteAddr}
+		server := newNgServer(servConfig)
+		server.start()
 	}
 }
