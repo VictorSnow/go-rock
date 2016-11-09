@@ -138,6 +138,13 @@ func (s *ngServer) handleClient(c net.Conn) {
 
 	defer c.Close()
 	defer func() {
+		s.sMutex.Lock()
+		defer s.sMutex.Unlock()
+		for k, v := range s.servs {
+			delete(s.servs, k)
+			v.Close()
+		}
+
 		s.client = &emptyNgConn{}
 	}()
 
