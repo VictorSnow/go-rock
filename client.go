@@ -32,9 +32,16 @@ func newNgClient(config *ngClientConfig) *ngClient {
 	return server
 }
 
+func (s *ngClient) forever() {
+	for {
+		s.start()
+	}
+}
+
 func (s *ngClient) start() {
 	c, err := net.Dial("tcp", s.servAddr)
 	if err != nil {
+		time.Sleep(3 * time.Second)
 		return
 	}
 
@@ -43,7 +50,9 @@ func (s *ngClient) start() {
 	s.client = &ngConn{c}
 	reader := bufio.NewReader(c)
 
-	go s.keepAlive()
+	closeChan := make(chan int, 1)
+	defer close(closeChan)
+	go s.keepAlive(closeChan)
 
 	for {
 		msg, err := readMsg(reader)
@@ -86,10 +95,12 @@ func (s *ngClient) start() {
 	}
 }
 
-func (s *ngClient) keepAlive() {
+func (s *ngClient) keepAlive(closeChan chan int) {
 	msg := newMsg(HEAD_KEEPALIVE, 0, []byte{})
 	for {
 		select {
+		case <-closeChan:
+			return
 		case <-time.After(10 * time.Second):
 			s.client.Write(encodeMsg(msg))
 		}

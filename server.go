@@ -28,7 +28,7 @@ func newNgServer(config *ngServerConfig) *ngServer {
 	server := &ngServer{
 		servs:      make(map[int64]*ngConn),
 		sMutex:     sync.Mutex{},
-		client:     nil,
+		client:     &emptyNgConn{},
 		seq:        1,
 		clientAddr: config.clientAddr,
 		servAddr:   config.servAddr,
@@ -63,6 +63,12 @@ func (s *ngServer) listenServ() {
 }
 
 func (s *ngServer) handleServ(c net.Conn) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("panic serv", err)
+		}
+	}()
+
 	seq := s.nextSeq()
 	s.addServ(seq, c)
 	defer s.closeSeq(seq)
@@ -113,6 +119,12 @@ func (s *ngServer) listenClient() {
 }
 
 func (s *ngServer) handleClient(c net.Conn) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("client panic", err)
+		}
+	}()
+
 	defer c.Close()
 	defer func() {
 		s.client = &emptyNgConn{}
