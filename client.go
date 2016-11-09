@@ -109,7 +109,7 @@ func (s *ngClient) keepAlive(closeChan chan int) {
 		case <-closeChan:
 			return
 		case <-time.After(10 * time.Second):
-			s.client.Write(encodeMsg(msg))
+			s.client.WriteMsg(msg)
 		}
 	}
 }
@@ -136,7 +136,7 @@ func (s *ngClient) servLocal(seq int64) {
 
 		msg := newMsg(HEAD_CONTENT, seq, buff[:n])
 
-		_, err = s.client.Write(encodeMsg(msg))
+		_, err = s.client.WriteMsg(msg)
 		if err != nil {
 			break
 		}
@@ -152,7 +152,7 @@ func (s *ngClient) closeSeq(seq int64) {
 		c.Close()
 
 		closeMsg := newMsg(HEAD_CLOSE, seq, []byte{})
-		s.client.Write(encodeMsg(closeMsg))
+		s.client.WriteMsg(closeMsg)
 	}
 }
 

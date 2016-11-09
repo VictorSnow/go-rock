@@ -85,7 +85,7 @@ func (s *ngServer) handleServ(c net.Conn) {
 	defer s.closeSeq(seq)
 
 	msg := newMsg(HEAD_NEWCONN, seq, []byte{})
-	_, err := s.client.Write(encodeMsg(msg))
+	_, err := s.client.WriteMsg(msg)
 	if err != nil {
 		return
 	}
@@ -98,15 +98,9 @@ func (s *ngServer) handleServ(c net.Conn) {
 			break
 		}
 		msg := newMsg(HEAD_CONTENT, seq, buff[:n])
-
-		msgBuff := encodeMsg(msg)
-		n, err = s.client.Write(msgBuff)
+		n, err = s.client.WriteMsg(msg)
 
 		if err != nil {
-			break
-		}
-
-		if n != len(msgBuff) {
 			break
 		}
 	}
@@ -209,6 +203,6 @@ func (s *ngServer) closeSeq(seq int64) {
 		c.Close()
 
 		closeMsg := newMsg(HEAD_CLOSE, seq, []byte{})
-		s.client.Write(encodeMsg(closeMsg))
+		s.client.WriteMsg(closeMsg)
 	}
 }

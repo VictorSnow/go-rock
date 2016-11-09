@@ -11,6 +11,7 @@ const NGCONN_RETRY = 5
 type ngConnInterface interface {
 	Read(buff []byte) (int, error)
 	Write(buff []byte) (int, error)
+	WriteMsg(*ngMessage) (int, error)
 	Close() error
 }
 
@@ -27,6 +28,10 @@ func (r *emptyNgConn) Close() error {
 }
 
 func (r *emptyNgConn) Write(buff []byte) (int, error) {
+	return 0, emptyIoError
+}
+
+func (r *emptyNgConn) WriteMsg(msg *ngMessage) (int, error) {
 	return 0, emptyIoError
 }
 
@@ -49,6 +54,11 @@ func (c *ngConn) Read(buff []byte) (int, error) {
 		return n, err
 	}
 	return 0, io.EOF
+}
+
+func (c *ngConn) WriteMsg(msg *ngMessage) (int, error) {
+	buff := encodeMsg(msg)
+	return c.Write(buff)
 }
 
 func (c *ngConn) Write(buff []byte) (int, error) {
