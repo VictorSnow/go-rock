@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -39,6 +40,12 @@ func (s *ngClient) forever() {
 }
 
 func (s *ngClient) start() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("client start error", err)
+		}
+	}()
+
 	c, err := net.Dial("tcp", s.servAddr)
 	if err != nil {
 		time.Sleep(3 * time.Second)
